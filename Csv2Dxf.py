@@ -1,7 +1,10 @@
 #!/usr/bin/python
 
 import csv
-import dxfwrite
+import ezdxf
+from ezdxf import colors
+from ezdxf.enums import TextEntityAlignment
+from ezdxf.gfxattribs import GfxAttribs
 
 import argparse
 #import pandas
@@ -20,15 +23,20 @@ print ("Output file: %s" % args.output )
 
 ## process files ##
 
-# create/overwrite output file
-# and start entities section
-from dxfwrite import DXFEngine as dxf
-drawing = dxf.drawing(args.output)
-drawing.add_layer('PT')
-drawing.add_layer('PN', color=2)
-drawing.add_layer('EL', color=3)
-drawing.add_layer('DE', color=4)
-drawing.save()
+# Create a new DXF document.
+doc = ezdxf.new(dxfversion="R2010")
+
+# Create new table entries (layers, linetypes, text styles, ...).
+doc.layers.add("PT", color=colors.RED)
+doc.layers.add("PN", color=colors.CYAN)
+doc.layers.add("EL", color=colors.GREEN)
+doc.layers.add("DE", color=colors.MAGENTA)
+
+# DXF entities (LINE, TEXT, ...) reside in a layout (modelspace, 
+# paperspace layout or block definition).  
+msp = doc.modelspace()
+
+# Add entities to a layout by factory methods: layout.add_...() 
 
 # open csv file and process contents
 with open(args.input) as file_obj:
@@ -37,21 +45,16 @@ with open(args.input) as file_obj:
     for pnum, north, east, elev, desc in reader:
         print ("Processing point: " + pnum)
         
-        pt = dxf.point((east, north, elev))
-        pt['layer'] = 'PT'
-        drawing.add(pt)
+        msp.add_point((float(east),float(north),float(elev)), dxfattribs=GfxAttribs(layer="PT"))
 
-        pn = dxf.text(pnum, (east, north), valign=dxfwrite.BOTTOM, alignpoint=(east, north))
-        pn['layer'] = 'PN'
-        drawing.add(pn)
+        msp.add_text(pnum, dxfattribs=GfxAttribs(layer="PN")
+        ).set_placement((float(east), float(north)), align=TextEntityAlignment.BOTTOM_LEFT)
 
-        el = dxf.text(str(elev), (east, north), halign=dxfwrite.RIGHT, valign=dxfwrite.BOTTOM, alignpoint=(east, north))
-        el['layer'] = 'EL'
-        drawing.add(el)
+        msp.add_text(str(elev), dxfattribs=GfxAttribs(layer="EL")
+        ).set_placement((float(east), float(north), float(elev)), align=TextEntityAlignment.BOTTOM_RIGHT)
 
-        de = dxf.text(desc, (east, north), valign=dxfwrite.TOP, alignpoint=(east, north))
-        de['layer'] = 'DE'
-        drawing.add(de)
+        msp.add_text(desc, dxfattribs=GfxAttribs(layer="DE")
+        ).set_placement((float(east), float(north)), align=TextEntityAlignment.TOP_LEFT)
 
-drawing.save()
+doc.saveas(args.output)
 print ("Done\n")
