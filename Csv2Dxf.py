@@ -7,7 +7,6 @@ from ezdxf.enums import TextEntityAlignment
 from ezdxf.gfxattribs import GfxAttribs
 
 import argparse
-#import pandas
 
 __author__ = 'dlb'
 __version__ = '2.0'
@@ -25,6 +24,7 @@ print ("Output file: %s" % args.output )
 
 # Create a new DXF document.
 doc = ezdxf.new(dxfversion="R2010")
+doc.header['$INSUNITS'] = 21
 
 # Create new table entries (layers, linetypes, text styles, ...).
 doc.layers.add("PT", color=colors.RED)
@@ -36,7 +36,6 @@ doc.layers.add("DE", color=colors.MAGENTA)
 # paperspace layout or block definition).  
 msp = doc.modelspace()
 
-# Add entities to a layout by factory methods: layout.add_...() 
 
 # open csv file and process contents
 with open(args.input) as file_obj:
@@ -45,12 +44,13 @@ with open(args.input) as file_obj:
     for pnum, north, east, elev, desc in reader:
         print ("Processing point: " + pnum)
         
+        # Add entities to a layout by factory methods: layout.add_...() 
         msp.add_point((float(east),float(north),float(elev)), dxfattribs=GfxAttribs(layer="PT"))
 
         msp.add_text(pnum, dxfattribs=GfxAttribs(layer="PN")
         ).set_placement((float(east), float(north)), align=TextEntityAlignment.BOTTOM_LEFT)
 
-        msp.add_text(str(elev), dxfattribs=GfxAttribs(layer="EL")
+        msp.add_text("{:.2f}".format(float(elev)), dxfattribs=GfxAttribs(layer="EL")
         ).set_placement((float(east), float(north), float(elev)), align=TextEntityAlignment.BOTTOM_RIGHT)
 
         msp.add_text(desc, dxfattribs=GfxAttribs(layer="DE")
